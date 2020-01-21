@@ -1,0 +1,16 @@
+
+
+struct TGA_Header {
+    idLength: u4,
+    colorMapType: u4,
+    dataTypeCode: u4,
+    colorMapOrigin: u8,
+    colorMapLength: u8,
+    colorMapDepth: u4,
+    xOrigin: u8,
+    yOrigin: u8,
+    width: u8,
+    height: u8,
+    bitsPerPixel: u4,
+    imageDescriptor: u4,
+}
