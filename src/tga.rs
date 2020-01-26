@@ -1,4 +1,4 @@
-use std::io;
+luse std::io;
 use std::io::{Read, Seek};
 use byteorder::{ReadBytesExt, LittleEndian};
 use std::error::Error;
@@ -107,6 +107,9 @@ struct Header {
     image_descriptor : u8,    // 00001000, bits 0-3 are set to 0 for 32 bit image
 }
 
+
+let 
+
 impl Header {
     // construct new Header
     fn new() -> Header {
@@ -142,6 +145,33 @@ impl Header {
             bits_per_pixel   : try!(r.read_u8()),
             image_descriptor : try!(r.read_u8()),
         })
+    }
+}
+
+struct Color_Map {
+    // sizes in bytes
+    start_offset: usize,
+    entry_size:   usize,
+    bytes:        Vec<u8>,
+}
+
+impl Color_Map {
+    pub fn from_reader(r: &mut Read, start_offset: u16, num_entries: u16, bits_per_entry: u8)
+    -> ImageResult<ColorMap> {
+        let bytes_per_entry = (bits_per_entry as usize + 7) / 8; //Why?
+        let mut bytes = vec![0; bytes_per_entry * num_entries as usize];
+        try!(r.read_exact(&mut bytes));
+        Ok(Color_Map {
+            entry_size: bytes_per_entry,
+            start_offset: start_offset as usize,
+            bytes: bytes,
+        })
+    }
+
+    // Get an entry from the color map
+    pub fn get(&self, index: usize) -> &[u8] {
+        let entry = self.start_offset + self.entry_size * index;
+        &self.bytes[entry..entry + self.entry_size]
     }
 }
 
