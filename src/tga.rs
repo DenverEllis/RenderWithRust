@@ -175,6 +175,91 @@ impl Color_Map {
     }
 }
 
+pub struct TGA_Decoder<R> {
+    r: R,
+
+    width:               usize,
+    height:              usize,
+    bytes_per_pixel:     usize,
+    has_loaded_metadata: bool,
+
+    image_type: Image_Type,
+    color_type: Color_Type,
+
+    header: Header,
+    color_map: Option<ColorMap>,
+}
+
+impl<R: Read + Seek> TGA_Decoder<R> {
+    //create a new decoder that decodes from the stream r
+    pub fn new(r: R) -> TGA_Decoder<R> {
+        TGA_Decoder {
+            r: r,
+
+            width:  0,
+            height: 0,
+            bytes_per_pixel: 0,
+            has_loaded_metadata: false,
+
+            image_type: Image_Type::Unknown,
+            color_type: Color_Type::Gray(1),
+
+            header: Header::new(),
+            color_map: None,
+        }
+    }
+
+    fn read_header(&mut self) -> Image_Result<()> {
+        self.header = try!(Header::from_reader(&mut self.r));
+        self.image_type = Image_Type::new(self.header.image_type);
+        self.width = self.header.image_width as usize;
+        self.height = self.header.image_height as usize;
+        self.byttes_per_pixel = (self.header.pixel_depth as usize + 7) /8;
+        Ok(())
+    }
+
+    fn read_metadata(&mut self) -> ImageResult<()> {
+        if !self.has_loaded_metadata {
+            try!(self.read_header());
+            try!(self.read_image_id());
+            try!(self.read_color_map());
+            try!(self.read_color_information());
+            self.has_loaded_metadata = true;
+        }
+        Ok(())
+    }
+
+    // loads color information
+    //currently won't handle depths not divisible by 8 or greater than 32
+    fn read_color_information(&mut self) -> Image_Result<()> {
+        if self.header.pixel_depth % 8 != 0 {
+            return Err(Image_Error::Unsupported_Error("\ Bit depth must be divisible by 8".to_string()));
+        }
+
+        if self.header.pixel_depth >32 {
+            return Err(Image_Error::Unsupported_Error("\ Bit depth must be less than 32".to_string()));
+        }
+
+        let num_alpha_bits = self.header.image_desc & 0b1111;
+
+        let other_channel_bits = if self.header.map_type != 0 {
+            self.header.map_entry_size
+        } else {
+            if num_alpha_bits > self.header.pixel_depth {
+                return Err(Image_Error::Unsupported_Error(format!("\
+                    Color format not supported. Alpha bits: {}", num_alpha_bits).to_string()))
+            }
+            self.header.pixel_depth - num_alpha_bits
+        };
+
+        let color = self.image_type.is_color();
+
+        match (num_alpha_bits, other_channel_bits, color) {
+
+        }
+    }
+}
+
 struct Image {
     width: i32,
     height: i32,
