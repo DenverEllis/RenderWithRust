@@ -23,11 +23,11 @@ fn main() {
 
 
     //save image
-    let path = Path::new("out/image.png");
+    let path = Path::new("out/pixel.png");
 
 
     let _file = match File::create(&path) {
         Err(e) =>{panic!("there was a problem creating the file: {:?}", e);}
-        Ok(_file) => {let _ = img.save_with_format(&path, image::PNG);}
+        Ok(_file) => {let _ = img.save(&path).unwrap();}
     };
 }
