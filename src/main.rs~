@@ -1,3 +1,0 @@
-Fn main() {
-    println!("Hello, world!");
-}
