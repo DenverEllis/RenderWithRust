@@ -1,7 +1,8 @@
-#[allow(unused_variables)]
-#[allow(unused_imports)]
-#[allow(dead_code)]
-
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+#![allow(dead_code)]
+#![allow(unused_mut)]
+#![allow(non_snake_case)]
 
 
 use std::path::Path;
@@ -42,7 +43,7 @@ pub fn set_all (image: &mut RgbaImage,
 
 
 /*------------------------------------------------------------------------------
-                    LINE METHODS
+                    LINE METHODS (STRATEGY PATTERN)
 ------------------------------------------------------------------------------*/
 
 // for coordinate selection
@@ -51,93 +52,102 @@ struct Point {
     y: f32,
 }
 
-struct Line {
+struct Line <'a> {
     x0   : f32,
     y0   : f32,
     x1   : f32,
     y1   : f32,
     color: [u8; 4],
-    image: RgbaImage,
+    img  : &'a mut RgbaImage,
     draw_behavior: Box<dyn DrawBehavior>,
 }
 
 trait DrawBehavior {
-    fn draw(&mut self);
-}
-
-struct Naive0{
-    x0   : f32,
-    y0   : f32,
-    x1   : f32,
-    y1   : f32,
-    color: [u8; 4],
-    image: RgbaImage,
-}
-struct Naive1{}
-struct Bresenham{}
-struct Wu{}
-
-
-impl DrawBehavior for Naive0 {
-    fn draw(&mut self) {
-        for t in 0..100 {
-            let t = t as f32 * 0.01;
-            let x: u32 = (self.x0 + (self.x1 - self.x0) * t) as u32;
-            let y: u32 = (self.y0 + (self.y1 - self.y0) * t) as u32;
-            set(&mut self.image, x, y, self.color);
-        }
-    }
+    fn draw(&self,
+            x0   : f32,
+            y0   : f32,
+            x1   : f32,
+            y1   : f32,
+            color: [u8; 4],
+            img  : &mut RgbaImage);
 }
 
 enum LineMethodEnum {
     NAIVE0,
 }
 
-impl Line {
+struct Naive0{}
+struct Naive1{}
+struct Bresenham{}
+struct Wu{}
+
+impl DrawBehavior for Naive0 {
+    fn draw(&self,
+            x0   : f32,
+            y0   : f32,
+            x1   : f32,
+            y1   : f32,
+            color: [u8; 4],
+            img  : &mut RgbaImage) {
+        for t in 0..100 {
+            let t = t as f32 * 0.01;
+            let x: u32 = (x0 + (x1 - x0) * t) as u32;
+            let y: u32 = (y0 + (y1 - y0) * t) as u32;
+            set(img, x, y, color);
+        }
+    }
+}
+
+
+
+impl Line<'_> {
     fn new(x0   : f32,
            y0   : f32,
            x1   : f32,
            y1   : f32,
            color: [u8; 4],
-           image: RgbaImage,
+           img  : &mut RgbaImage,
            line_method: LineMethodEnum)
-        -> Line {
+        -> Line<'_> {
         match line_method {
             LineMethodEnum::NAIVE0 => Line{x0,
                                            y0,
                                            x1,
                                            y1,
                                            color,
-                                           image,
-                                           draw_behavior: Box::new(Naive0{x0, y0, x1, y1, color, image})
+                                           img,
+                                           draw_behavior: Box::new(Naive0{})
                                           },
         }
     }
 
-    fn draw(&mut self) {
-        self.draw_behavior.draw();
+    fn draw(self) {
+        self.draw_behavior.draw(self.x0,
+                                self.y0,
+                                self.x1,
+                                self.y1,
+                                self.color,
+                                self.img);
     }
 }
 
-fn line (x0t   : f32,
-         y0t   : f32,
-         x1t   : f32,
-         y1t   : f32,
-         colort: [u8; 4],
-         imaget: RgbaImage,
-         line_method: LineMethodEnum)
-    -> bool {
+fn line(x0t   : f32,
+        y0t   : f32,
+        x1t   : f32,
+        y1t   : f32,
+        colort: [u8; 4],
+        imaget: &mut RgbaImage,
+        line_method: LineMethodEnum)
+{
     let mut temp = Line::new(x0t,
-                         y0t,
-                         x1t,
-                         y1t,
-                         colort,
-                         imaget,
-                         line_method);
+                             y0t,
+                             x1t,
+                             y1t,
+                             colort,
+                             imaget,
+                             line_method);
     temp.draw();
-    return true
 }
-
 
 
 /*------------------------------------------------------------------------------
@@ -145,16 +155,15 @@ fn line (x0t   : f32,
 ------------------------------------------------------------------------------*/
 
 fn main() {
-    // make a black image
     let mut img: RgbaImage = ImageBuffer::new(WIDTH, HEIGHT);
     set_all(&mut img, BLACK);
     set(&mut img, 52, 41, GREEN);
-    //line::line(0, 0, 50, 50, BLUE, &mut img, NAIVE0);
-    imageops::flip_vertical(&img);
+
+    line(0f32, 0f32, 50f32, 50f32, BLUE, &mut img, LineMethodEnum::NAIVE0);
 
 
     //save image
-    let path = Path::new("out/pixel.png");
+    let path = Path::new("out/line.png");
     let _file = match File::create(&path) {
         Err(e) =>{panic!("there was a problem creating the file: {:?}", e);}
         Ok(_file) => {let _ = img.save(&path).unwrap();}
