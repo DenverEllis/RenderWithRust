@@ -8,6 +8,7 @@
 use std::path::Path;
 use std::fs::File;
 use image::{RgbaImage, ImageBuffer, imageops};
+use std::mem;
 
 const WIDTH : u32 = 100;
 const HEIGHT: u32 = 100;
@@ -24,11 +25,11 @@ const BLUE  : [u8; 4] = [  0,   0, 255, 255];
 ------------------------------------------------------------------------------*/
 
 pub fn set(image: &mut RgbaImage,
-           x    : u32,
-           y    : u32,
+           x    : i32,
+           y    : i32,
            color: [u8; 4])
     -> bool {
-    image[(x, y)] = image::Rgba([color[0], color[1], color[2], color[3]]);
+    image[(x as u32, y as u32)] = image::Rgba([color[0], color[1], color[2], color[3]]);
     return true
 }
 
@@ -53,10 +54,10 @@ struct Point {
 }
 
 struct Line <'a> {
-    x0   : f32,
-    y0   : f32,
-    x1   : f32,
-    y1   : f32,
+    x0   : i32,
+    y0   : i32,
+    x1   : i32,
+    y1   : i32,
     color: [u8; 4],
     img  : &'a mut RgbaImage,
     draw_behavior: Box<dyn DrawBehavior>,
@@ -64,36 +65,78 @@ struct Line <'a> {
 
 trait DrawBehavior {
     fn draw(&self,
-            x0   : f32,
-            y0   : f32,
-            x1   : f32,
-            y1   : f32,
+            x0   : i32,
+            y0   : i32,
+            x1   : i32,
+            y1   : i32,
             color: [u8; 4],
             img  : &mut RgbaImage);
 }
 
 enum LineMethodEnum {
     NAIVE0,
+    NAIVE1,
+    NAIVE2,
 }
 
 struct Naive0{}
 struct Naive1{}
+struct Naive2{}
 struct Bresenham{}
 struct Wu{}
 
 impl DrawBehavior for Naive0 {
     fn draw(&self,
-            x0   : f32,
-            y0   : f32,
-            x1   : f32,
-            y1   : f32,
+            x0   : i32,
+            y0   : i32,
+            x1   : i32,
+            y1   : i32,
             color: [u8; 4],
             img  : &mut RgbaImage) {
         for t in 0..100 {
             let t = t as f32 * 0.01;
-            let x: u32 = (x0 + (x1 - x0) * t) as u32;
-            let y: u32 = (y0 + (y1 - y0) * t) as u32;
+            let x: i32 = (x0 as f32 + (x1 - x0) as f32 * t) as i32;
+            let y: i32 = (y0 as f32 + (y1 - y0) as f32 * t) as i32;
             set(img, x, y, color);
+        }
+    }
+}
+
+impl DrawBehavior for Naive1 {
+    fn draw(&self,
+            x0   : i32,
+            y0   : i32,
+            x1   : i32,
+            y1   : i32,
+            color: [u8; 4],
+            img  : &mut RgbaImage) {
+
+        let mut steep: bool = false;
+        let mut x0t = x0;
+        let mut x1t = x1;
+        let mut y0t = y0;
+        let mut y1t = y1;
+
+        if (x0-x1).abs() < (y0-y1).abs() { //if the line is steep, transpose
+            mem::swap(&mut x0t, &mut y0t);
+            mem::swap(&mut x1t, &mut y1t);
+            steep = true;
+        }
+
+        if x0 > x1 { // make it left to right
+            mem::swap(&mut x0t, &mut x1t);
+            mem::swap(&mut y0t, &mut y1t);
+        }
+
+        for x in x0t..x1t  {
+            let t: f32 = (x-x0t) as f32 / (x1t-x0t) as f32;
+            let y: i32 = (y0t as f32 * (1.0 - t) + y1t as f32 * t) as i32;
+
+            if steep {
+                set(img, y, x, color);  //if transposed, de-transpose
+            } else {
+                set(img, x, y, color);
+            }
         }
     }
 }
@@ -101,10 +144,10 @@ impl DrawBehavior for Naive0 {
 
 
 impl Line<'_> {
-    fn new(x0   : f32,
-           y0   : f32,
-           x1   : f32,
-           y1   : f32,
+    fn new(x0   : i32,
+           y0   : i32,
+           x1   : i32,
+           y1   : i32,
            color: [u8; 4],
            img  : &mut RgbaImage,
            line_method: LineMethodEnum)
@@ -117,6 +160,15 @@ impl Line<'_> {
                                            color,
                                            img,
                                            draw_behavior: Box::new(Naive0{})
+                                          },
+                                          
+            LineMethodEnum::NAIVE1 => Line{x0,
+                                           y0,
+                                           x1,
+                                           y1,
+                                           color,
+                                           img,
+                                           draw_behavior: Box::new(Naive1{})
                                           },
         }
     }
@@ -131,10 +183,10 @@ impl Line<'_> {
     }
 }
 
-fn line(x0t   : f32,
-        y0t   : f32,
-        x1t   : f32,
-        y1t   : f32,
+fn line(x0t   : i32,
+        y0t   : i32,
+        x1t   : i32,
+        y1t   : i32,
         colort: [u8; 4],
         imaget: &mut RgbaImage,
         line_method: LineMethodEnum)
@@ -159,11 +211,13 @@ fn main() {
     set_all(&mut img, BLACK);
     set(&mut img, 52, 41, GREEN);
 
-    line(0f32, 0f32, 50f32, 50f32, BLUE, &mut img, LineMethodEnum::NAIVE0);
-
+    line(13, 20, 80, 40, WHITE, &mut img, LineMethodEnum::NAIVE1);
+    line(20, 13, 40, 80, RED,   &mut img, LineMethodEnum::NAIVE1);
+    line(80, 40, 13, 20, RED,   &mut img, LineMethodEnum::NAIVE1);
+    imageops::flip_vertical_in_place(&mut img);
 
     //save image
-    let path = Path::new("out/line.png");
+    let path = Path::new("out/lineNaive1.png");
     let _file = match File::create(&path) {
         Err(e) =>{panic!("there was a problem creating the file: {:?}", e);}
         Ok(_file) => {let _ = img.save(&path).unwrap();}
