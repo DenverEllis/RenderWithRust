@@ -2,7 +2,7 @@
 #[allow(unused_imports)]
 #[allow(dead_code)]
 
-use image::{RgbaImage};
+use image::RgbaImage;
 
 pub fn set(image: &mut RgbaImage,
            x    : u32,
