@@ -1,0 +1,48 @@
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+#![allow(dead_code)]
+#![allow(unused_mut)]
+#![allow(non_snake_case)]
+
+
+use std::path::Path;
+use std::fs::File;
+use image::{RgbaImage, ImageBuffer, imageops};
+use std::mem;
+use render_with_rust;
+
+const WIDTH : u32 = 100;
+const HEIGHT: u32 = 100;
+
+const WHITE : [u8; 4] = [  0,   0,   0,   0];
+const BLACK : [u8; 4] = [  0,   0,   0, 255];
+const RED   : [u8; 4] = [255,   0,   0, 255];
+const GREEN : [u8; 4] = [  0, 255,   0, 255];
+const BLUE  : [u8; 4] = [  0,   0, 255, 255];
+
+
+
+
+
+
+/*------------------------------------------------------------------------------
+                    MAIN METHOD
+------------------------------------------------------------------------------*/
+
+fn main() {
+    let mut img: RgbaImage = ImageBuffer::new(WIDTH, HEIGHT);
+    set_all(&mut img, BLACK);
+    set(&mut img, 52, 41, GREEN);
+
+    line(13, 20, 80, 40, WHITE, &mut img, line::LineMethodEnum::BRESENHAM);
+    line(20, 13, 40, 80, RED,   &mut img, LineMethodEnum::BRESENHAM);
+    line(80, 40, 13, 20, RED,   &mut img, LineMethodEnum::BRESENHAM);
+    imageops::flip_vertical_in_place(&mut img);
+
+    //save image
+    let path = Path::new("out/lineNaive1.png");
+    let _file = match File::create(&path) {
+        Err(e) =>{panic!("there was a problem creating the file: {:?}", e);}
+        Ok(_file) => {let _ = img.save(&path).unwrap();}
+    };
+}

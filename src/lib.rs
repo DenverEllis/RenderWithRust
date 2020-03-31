@@ -1,3 +1,6 @@
+//#![deny(missing_docs)]
+
+// will remove ALL on publication
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 #![allow(dead_code)]
@@ -10,4 +13,4 @@ use image::{RgbaImage, ImageBuffer, imageops};
 mod line;
 mod geometry;
 mod model;
-mod image;
+mod backend;
