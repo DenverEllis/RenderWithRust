@@ -25,7 +25,7 @@ trait DrawBehavior {
             img  : &mut RgbaImage);
 }
 
-enum LineMethodEnum {
+pub enum LineMethodEnum {
     NAIVE0,
     NAIVE1,
     NAIVE2,
@@ -255,7 +255,7 @@ impl Line<'_> {
     }
 }
 
-fn line(x0t   : i32,
+pub fn line(x0t   : i32,
         y0t   : i32,
         x1t   : i32,
         y1t   : i32,
