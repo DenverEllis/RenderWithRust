@@ -11,6 +11,5 @@ use std::{path::Path, fs::File, mem};
 use image::{RgbaImage, ImageBuffer, imageops};
 
 pub mod line;
-pub mod geometry;
 pub mod model;
 pub mod backend;

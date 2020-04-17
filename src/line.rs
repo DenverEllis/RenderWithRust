@@ -1,15 +1,13 @@
 use std::mem;
 use image::RgbaImage;
-use crate::backend::images::set;
+use crate::backend::{images::set, geometry::*};
 
 /*------------------------------------------------------------------------------
                     LINE METHODS (STRATEGY PATTERN)
 ------------------------------------------------------------------------------*/
 struct Line <'a> {
-    x0   : i32,
-    y0   : i32,
-    x1   : i32,
-    y1   : i32,
+    p0: Vec2i,
+    p1: Vec2i,
     color: [u8; 4],
     img  : &'a mut RgbaImage,
     draw_behavior: Box<dyn DrawBehavior>,
@@ -17,10 +15,8 @@ struct Line <'a> {
 
 trait DrawBehavior {
     fn draw(&self,
-            x0   : i32,
-            y0   : i32,
-            x1   : i32,
-            y1   : i32,
+            p0: Vec2i,
+            p1: Vec2i,
             color: [u8; 4],
             img  : &mut RgbaImage);
 }
@@ -40,16 +36,14 @@ struct Wu{}
 
 impl DrawBehavior for Naive0 {
     fn draw(&self,
-            x0   : i32,
-            y0   : i32,
-            x1   : i32,
-            y1   : i32,
+            p0: Vec2i,
+            p1: Vec2i,
             color: [u8; 4],
             img  : &mut RgbaImage) {
         for t in 0..100 {
             let t = t as f32 * 0.01;
-            let x: i32 = (x0 as f32 + (x1 - x0) as f32 * t) as i32;
-            let y: i32 = (y0 as f32 + (y1 - y0) as f32 * t) as i32;
+            let x: i32 = (p0.x.value as f32 + (p1.x.value - p0.x.value) as f32 * t) as i32;
+            let y: i32 = (p0.y.value as f32 + (p1.y.value - p0.y.value) as f32 * t) as i32;
             set(img, x, y, color);
         }
     }
@@ -57,26 +51,23 @@ impl DrawBehavior for Naive0 {
 
 impl DrawBehavior for Naive1 {
     fn draw(&self,
-            x0   : i32,
-            y0   : i32,
-            x1   : i32,
-            y1   : i32,
+            p0   : Vec2i,
+            p1   : Vec2i,
             color: [u8; 4],
             img  : &mut RgbaImage) {
-
         let mut steep: bool = false;
-        let mut x0t = x0;
-        let mut x1t = x1;
-        let mut y0t = y0;
-        let mut y1t = y1;
+        let mut x0t = p0.x.value;
+        let mut x1t = p1.x.value;
+        let mut y0t = p0.y.value;
+        let mut y1t = p1.y.value;
 
-        if (x0-x1).abs() < (y0-y1).abs() { //if the line is steep, transpose
+        if (p0.x.value - p1.x.value).abs() < (p0.y.value - p1.y.value).abs() { //if the line is steep, transpose
             mem::swap(&mut x0t, &mut y0t);
             mem::swap(&mut x1t, &mut y1t);
             steep = true;
         }
 
-        if x0 > x1 { // make it left to right
+        if p0.x.value > p1.x.value { // make it left to right
             mem::swap(&mut x0t, &mut x1t);
             mem::swap(&mut y0t, &mut y1t);
         }
@@ -96,26 +87,24 @@ impl DrawBehavior for Naive1 {
 
 impl DrawBehavior for Naive2 {
     fn draw(&self,
-            x0   : i32,
-            y0   : i32,
-            x1   : i32,
-            y1   : i32,
+            p0   : Vec2i,
+            p1   : Vec2i,
             color: [u8; 4],
             img  : &mut RgbaImage) {
 
         let mut steep: bool = false;
-        let mut x0t  : i32 = x0;
-        let mut x1t  : i32 = x1;
-        let mut y0t  : i32 = y0;
-        let mut y1t  : i32 = y1;
+        let mut x0t = p0.x.value;
+        let mut x1t = p1.x.value;
+        let mut y0t = p0.y.value;
+        let mut y1t = p1.y.value;
 
-        if (x0-x1).abs() < (y0-y1).abs() { //if the line is steep, transpose
+        if (p0.x.value - p1.x.value).abs() < (p0.y.value - p1.y.value).abs() { //if the line is steep, transpose
             mem::swap(&mut x0t, &mut y0t);
             mem::swap(&mut x1t, &mut y1t);
             steep = true;
         }
 
-        if x0 > x1 { // make it left to right
+        if p0.x.value > p1.x.value { // make it left to right { // make it left to right
             mem::swap(&mut x0t, &mut x1t);
             mem::swap(&mut y0t, &mut y1t);
         }
@@ -144,26 +133,24 @@ impl DrawBehavior for Naive2 {
 
 impl DrawBehavior for Bresenham {
     fn draw(&self,
-            x0   : i32,
-            y0   : i32,
-            x1   : i32,
-            y1   : i32,
+            p0   : Vec2i,
+            p1   : Vec2i,
             color: [u8; 4],
             img  : &mut RgbaImage) {
         // Needed for mutability and protection of user input
         let mut steep: bool = false;
-        let mut x0t  : i32 = x0;
-        let mut x1t  : i32 = x1;
-        let mut y0t  : i32 = y0;
-        let mut y1t  : i32 = y1;
+        let mut x0t = p0.x.value;
+        let mut x1t = p1.x.value;
+        let mut y0t = p0.y.value;
+        let mut y1t = p1.y.value;
 
-        if (x0-x1).abs() < (y0-y1).abs() { //if the line is steep, transpose
+        if (p0.x.value - p1.x.value).abs() < (p0.y.value - p1.y.value).abs() { //if the line is steep, transpose
             mem::swap(&mut x0t, &mut y0t);
             mem::swap(&mut x1t, &mut y1t);
             steep = true;
         }
 
-        if x0 > x1 { // make it left to right
+        if p0.x.value > p1.x.value { // make it left to right
             mem::swap(&mut x0t, &mut x1t);
             mem::swap(&mut y0t, &mut y1t);
         }
@@ -198,75 +185,58 @@ impl DrawBehavior for Bresenham {
 
 
 impl Line<'_> {
-    fn new(x0   : i32,
-           y0   : i32,
-           x1   : i32,
-           y1   : i32,
+    fn new(p0   : Vec2i,
+           p1   : Vec2i,
            color: [u8; 4],
            img  : &mut RgbaImage,
            line_method: LineMethodEnum)
         -> Line<'_> {
         match line_method {
-            LineMethodEnum::NAIVE0 => Line{x0,
-                                           y0,
-                                           x1,
-                                           y1,
+            LineMethodEnum::NAIVE0 => Line{p0,
+                                           p1,
                                            color,
                                            img,
                                            draw_behavior: Box::new(Naive0{})
                                           },
                                           
-            LineMethodEnum::NAIVE1 => Line{x0,
-                                           y0,
-                                           x1,
-                                           y1,
+            LineMethodEnum::NAIVE1 => Line{p0,
+                                           p1,
                                            color,
                                            img,
                                            draw_behavior: Box::new(Naive1{})
                                           },
 
-            LineMethodEnum::NAIVE2 => Line{x0,
-                                           y0,
-                                           x1,
-                                           y1,
+            LineMethodEnum::NAIVE2 => Line{p0,
+                                           p1,
                                            color,
                                            img,
                                            draw_behavior: Box::new(Naive2{})
                                           },
 
-            LineMethodEnum::BRESENHAM => Line{x0,
-                                           y0,
-                                           x1,
-                                           y1,
-                                           color,
-                                           img,
-                                           draw_behavior: Box::new(Bresenham{})
+            LineMethodEnum::BRESENHAM => Line{p0,
+                                              p1,
+                                              color,
+                                              img,
+                                              draw_behavior: Box::new(Bresenham{})
                                           },
         }
     }
 
     fn draw(self) {
-        self.draw_behavior.draw(self.x0,
-                                self.y0,
-                                self.x1,
-                                self.y1,
+        self.draw_behavior.draw(self.p0,
+                                self.p1,
                                 self.color,
                                 self.img);
     }
 }
 
-pub fn line(x0t   : i32,
-        y0t   : i32,
-        x1t   : i32,
-        y1t   : i32,
-        colort: [u8; 4],
-        imaget: &mut RgbaImage,
-        line_method: LineMethodEnum)
-{
-    let mut temp = Line::new(x0t,
-                             y0t,
-                             x1t,
-                             y1t,
+pub fn line(p0t   : Vec2i,
+            p1t   : Vec2i,
+            colort: [u8; 4],
+            imaget: &mut RgbaImage,
+            line_method: LineMethodEnum) {
+    let mut temp = Line::new(p0t,
+                             p1t,
                              colort,
                              imaget,
                              line_method);
